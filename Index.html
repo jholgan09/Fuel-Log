@@ -1,0 +1,452 @@
+<div id="fuel-log-root"></div>
+<style>
+  #fuel-log-root, #fuel-log-root * { box-sizing: border-box; }
+  #fuel-log-root {
+    --bg: #1C1E22;
+    --bg-raised: #23262B;
+    --bg-card: #26292F;
+    --line: #34373D;
+    --text: #F0EDE6;
+    --text-dim: #9A968D;
+    --text-faint: #6B6862;
+    --signal: #FF5A36;
+    --signal-dim: #7A3120;
+    --recovery: #3D7068;
+    --recovery-dim: #1F3A36;
+    --gold: #E8B85C;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 16px;
+    padding: 0;
+    max-width: 720px;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .fl-num {
+    font-family: "SF Mono", "Roboto Mono", "Courier New", monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .fl-header {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .fl-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .fl-date {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .fl-daytype-select {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fl-gauge-section {
+    padding: 28px 24px 8px;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+  .fl-gauge-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+  .fl-gauge-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .fl-gauge-remaining {
+    font-size: 34px; font-weight: 700; line-height: 1;
+  }
+  .fl-gauge-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); margin-top: 4px;
+  }
+  .fl-gauge-sub {
+    font-size: 12px; color: var(--text-dim); margin-top: 2px;
+  }
+  .fl-stats { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .fl-stat-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .fl-stat-label { font-size: 13px; color: var(--text-dim); }
+  .fl-stat-val { font-size: 16px; font-weight: 600; }
+  .fl-macro-section { padding: 18px 24px; border-top: 1px solid var(--line); }
+  .fl-macro-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); margin: 0 0 14px; font-weight: 600; }
+  .fl-macro-row { margin-bottom: 14px; }
+  .fl-macro-row:last-child { margin-bottom: 0; }
+  .fl-macro-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .fl-macro-name { color: var(--text); font-weight: 600; }
+  .fl-macro-amt { color: var(--text-dim); }
+  .fl-macro-track { height: 6px; background: var(--bg-raised); border-radius: 3px; overflow: hidden; }
+  .fl-macro-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  .fl-entry-section { padding: 18px 24px 24px; border-top: 1px solid var(--line); }
+  .fl-entry-form { display: flex; gap: 8px; margin-bottom: 16px; }
+  .fl-entry-input {
+    flex: 1; background: var(--bg-raised); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 11px 12px; font-size: 14px; outline: none;
+  }
+  .fl-entry-input::placeholder { color: var(--text-faint); }
+  .fl-entry-input:focus { border-color: var(--signal); }
+  .fl-entry-btn {
+    background: var(--signal); color: #1C1E22; border: none; border-radius: 8px;
+    padding: 11px 18px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .fl-entry-btn:hover { background: #ff6e4d; }
+  .fl-entry-btn:disabled { background: var(--text-faint); cursor: default; }
+  .fl-log-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); margin: 0 0 10px; font-weight: 600; }
+  .fl-log-list { display: flex; flex-direction: column; gap: 2px; }
+  .fl-log-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; background: var(--bg-card); border-radius: 8px; font-size: 13px;
+  }
+  .fl-log-left { display: flex; flex-direction: column; gap: 2px; }
+  .fl-log-desc { color: var(--text); }
+  .fl-log-meta { color: var(--text-faint); font-size: 11px; }
+  .fl-log-right { display: flex; align-items: center; gap: 10px; }
+  .fl-log-cal { font-weight: 700; color: var(--gold); }
+  .fl-log-del { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; }
+  .fl-log-del:hover { color: var(--signal); }
+  .fl-empty { color: var(--text-faint); font-size: 13px; text-align: center; padding: 20px 0; }
+  .fl-loading { color: var(--text-faint); font-size: 13px; text-align: center; padding: 40px 0; }
+  .fl-tag {
+    display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 8px;
+  }
+</style>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+const DAY_TYPES = {
+  rest:      { label: "Rest",       cals: 2200, protein: 140, carbs: 200, fat: 80,  color: "var(--recovery)" },
+  easy:      { label: "Easy Run",   cals: 2500, protein: 150, carbs: 280, fat: 85,  color: "var(--recovery)" },
+  tempo:     { label: "Tempo/Speed",cals: 2700, protein: 155, carbs: 320, fat: 85,  color: "var(--gold)" },
+  long_run:  { label: "Long Run",   cals: 3200, protein: 160, carbs: 420, fat: 95,  color: "var(--signal)" },
+  bike:      { label: "Bike Ride",  cals: 2900, protein: 150, carbs: 360, fat: 90,  color: "var(--gold)" },
+  swim:      { label: "Swim",       cals: 2400, protein: 145, carbs: 270, fat: 80,  color: "var(--recovery)" },
+  brick:     { label: "Brick/Combo",cals: 3400, protein: 165, carbs: 440, fat: 100, color: "var(--signal)" },
+};
+
+// Lightweight built-in food estimator: keyword + portion heuristics.
+const FOOD_DB = [
+  { k: ["chicken breast","grilled chicken"], cal: 165, p: 31, c: 0, f: 3.6, unit: "100g", grams: 100 },
+  { k: ["chicken thigh"], cal: 209, p: 26, c: 0, f: 10.9, unit: "100g", grams: 100 },
+  { k: ["salmon"], cal: 208, p: 20, c: 0, f: 13, unit: "100g", grams: 100 },
+  { k: ["ground beef","beef"], cal: 250, p: 26, c: 0, f: 17, unit: "100g", grams: 100 },
+  { k: ["steak"], cal: 271, p: 25, c: 0, f: 19, unit: "100g", grams: 100 },
+  { k: ["egg"], cal: 78, p: 6.3, c: 0.6, f: 5.3, unit: "each", grams: 50 },
+  { k: ["bacon"], cal: 43, p: 3, c: 0.1, f: 3.3, unit: "slice", grams: 8 },
+  { k: ["rice"], cal: 206, p: 4.3, c: 45, f: 0.4, unit: "cup cooked", grams: 158 },
+  { k: ["pasta","spaghetti","noodles"], cal: 221, p: 8.1, c: 43, f: 1.3, unit: "cup cooked", grams: 140 },
+  { k: ["bread","toast"], cal: 80, p: 3, c: 14, f: 1, unit: "slice", grams: 28 },
+  { k: ["bagel"], cal: 277, p: 11, c: 55, f: 1.4, unit: "each", grams: 105 },
+  { k: ["oatmeal","oats"], cal: 158, p: 6, c: 27, f: 3.2, unit: "cup cooked", grams: 234 },
+  { k: ["banana"], cal: 105, p: 1.3, c: 27, f: 0.4, unit: "each", grams: 118 },
+  { k: ["apple"], cal: 95, p: 0.5, c: 25, f: 0.3, unit: "each", grams: 182 },
+  { k: ["avocado"], cal: 240, p: 3, c: 12.8, f: 22, unit: "each", grams: 150 },
+  { k: ["potato","baked potato"], cal: 161, p: 4.3, c: 37, f: 0.2, unit: "each", grams: 173 },
+  { k: ["sweet potato"], cal: 112, p: 2, c: 26, f: 0.1, unit: "each", grams: 130 },
+  { k: ["broccoli"], cal: 55, p: 3.7, c: 11, f: 0.6, unit: "cup", grams: 91 },
+  { k: ["salad","mixed greens"], cal: 20, p: 1.5, c: 4, f: 0.2, unit: "cup", grams: 40 },
+  { k: ["ranch"], cal: 145, p: 0.4, c: 2, f: 15, unit: "2 tbsp", grams: 30 },
+  { k: ["olive oil"], cal: 119, p: 0, c: 0, f: 13.5, unit: "tbsp", grams: 13.5 },
+  { k: ["peanut butter"], cal: 188, p: 8, c: 6, f: 16, unit: "2 tbsp", grams: 32 },
+  { k: ["greek yogurt"], cal: 100, p: 17, c: 6, f: 0.7, unit: "cup", grams: 245 },
+  { k: ["yogurt"], cal: 149, p: 8.5, c: 11, f: 8, unit: "cup", grams: 245 },
+  { k: ["milk"], cal: 103, p: 8, c: 12, f: 2.4, unit: "cup", grams: 244 },
+  { k: ["cheese","cheddar"], cal: 113, p: 7, c: 0.4, f: 9.3, unit: "slice", grams: 28 },
+  { k: ["protein shake","protein powder"], cal: 130, p: 24, c: 4, f: 1.5, unit: "scoop", grams: 30 },
+  { k: ["burrito"], cal: 450, p: 19, c: 55, f: 18, unit: "each", grams: 280 },
+  { k: ["chips","tortilla chips"], cal: 140, p: 2, c: 18, f: 7, unit: "1 oz", grams: 28 },
+  { k: ["pizza"], cal: 285, p: 12, c: 36, f: 10, unit: "slice", grams: 107 },
+  { k: ["burger","cheeseburger"], cal: 550, p: 30, c: 40, f: 28, unit: "each", grams: 250 },
+  { k: ["fries","french fries"], cal: 365, p: 4, c: 48, f: 17, unit: "medium", grams: 117 },
+  { k: ["gel","energy gel","gu"], cal: 100, p: 0, c: 25, f: 0, unit: "packet", grams: 32 },
+  { k: ["energy bar","clif bar","granola bar"], cal: 250, p: 8, c: 44, f: 7, unit: "bar", grams: 68 },
+  { k: ["gatorade","sports drink"], cal: 130, p: 0, c: 36, f: 0, unit: "20oz", grams: 591 },
+  { k: ["beer"], cal: 153, p: 1.6, c: 13, f: 0, unit: "12oz", grams: 355 },
+  { k: ["wine"], cal: 125, p: 0.1, c: 4, f: 0, unit: "5oz", grams: 148 },
+  { k: ["almonds","nuts"], cal: 164, p: 6, c: 6, f: 14, unit: "1oz", grams: 28 },
+  { k: ["hummus"], cal: 70, p: 2, c: 6, f: 5, unit: "2 tbsp", grams: 30 },
+  { k: ["tortilla"], cal: 140, p: 4, c: 24, f: 3.5, unit: "each", grams: 49 },
+  { k: ["sushi","sushi roll"], cal: 350, p: 12, c: 55, f: 8, unit: "roll", grams: 220 },
+];
+
+const QTY_WORDS = { half:0.5, quarter:0.25, "a ":1, an:1, one:1, two:2, three:3, four:4, five:5, six:6, couple:2 };
+
+function parsePortionMultiplier(text) {
+  const numMatch = text.match(/(\d+(\.\d+)?)\s*(x|cups?|slices?|oz|servings?)?/);
+  if (numMatch && numMatch[1]) {
+    const n = parseFloat(numMatch[1]);
+    if (n > 0 && n < 20) return n;
+  }
+  for (const [word, val] of Object.entries(QTY_WORDS)) {
+    if (text.includes(word)) return val;
+  }
+  return 1;
+}
+
+function estimateFromText(raw) {
+  const text = raw.toLowerCase();
+  const segments = text.split(/,| and |\+|;/).map(s => s.trim()).filter(Boolean);
+  let totals = { cal: 0, p: 0, c: 0, f: 0 };
+  let matched = [];
+  let unmatchedSegments = [];
+
+  segments.forEach(seg => {
+    let found = null;
+    for (const food of FOOD_DB) {
+      if (food.k.some(kw => seg.includes(kw))) { found = food; break; }
+    }
+    if (found) {
+      const mult = parsePortionMultiplier(seg);
+      totals.cal += found.cal * mult;
+      totals.p += found.p * mult;
+      totals.c += found.c * mult;
+      totals.f += found.f * mult;
+      matched.push(seg);
+    } else {
+      unmatchedSegments.push(seg);
+    }
+  });
+
+  // Fallback rough estimate for unmatched segments based on length/heuristic so total isn't zero.
+  unmatchedSegments.forEach(seg => {
+    if (!seg) return;
+    const mult = parsePortionMultiplier(seg);
+    // crude generic estimate: assume a moderate mixed-food portion
+    totals.cal += 180 * mult;
+    totals.p += 8 * mult;
+    totals.c += 20 * mult;
+    totals.f += 7 * mult;
+  });
+
+  return {
+    cal: Math.round(totals.cal),
+    protein: Math.round(totals.p),
+    carbs: Math.round(totals.c),
+    fat: Math.round(totals.f),
+    confidence: unmatchedSegments.length === 0 ? "matched" : (matched.length > 0 ? "partial" : "rough"),
+  };
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function formatDateLabel() {
+  const d = new Date();
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+}
+
+function FuelLog() {
+  const dateKey = todayKey();
+  const [loading, setLoading] = useState(true);
+  const [dayType, setDayType] = useState("easy");
+  const [entries, setEntries] = useState([]);
+  const [inputVal, setInputVal] = useState("");
+  const [adding, setAdding] = useState(false);
+  const nextId = useRef(1);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const dayRes = await window.storage.get(`day:${dateKey}`);
+        if (dayRes && dayRes.value) {
+          const parsed = JSON.parse(dayRes.value);
+          setDayType(parsed.dayType || "easy");
+          setEntries(parsed.entries || []);
+          const maxId = (parsed.entries || []).reduce((m, e) => Math.max(m, e.id || 0), 0);
+          nextId.current = maxId + 1;
+        }
+      } catch (e) {
+        // no existing data for today
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const persist = async (newDayType, newEntries) => {
+    try {
+      await window.storage.set(`day:${dateKey}`, JSON.stringify({ dayType: newDayType, entries: newEntries }));
+    } catch (e) {
+      console.error("Failed to save", e);
+    }
+  };
+
+  const handleDayTypeChange = (e) => {
+    const val = e.target.value;
+    setDayType(val);
+    persist(val, entries);
+  };
+
+  const handleAdd = () => {
+    if (!inputVal.trim()) return;
+    setAdding(true);
+    const est = estimateFromText(inputVal);
+    const entry = {
+      id: nextId.current++,
+      desc: inputVal.trim(),
+      cal: est.cal,
+      protein: est.protein,
+      carbs: est.carbs,
+      fat: est.fat,
+      confidence: est.confidence,
+      time: new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+    };
+    const newEntries = [...entries, entry];
+    setEntries(newEntries);
+    persist(dayType, newEntries);
+    setInputVal("");
+    setAdding(false);
+  };
+
+  const handleDelete = (id) => {
+    const newEntries = entries.filter(e => e.id !== id);
+    setEntries(newEntries);
+    persist(dayType, newEntries);
+  };
+
+  const target = DAY_TYPES[dayType];
+  const consumed = useMemo(() => entries.reduce((acc, e) => ({
+    cal: acc.cal + e.cal, protein: acc.protein + e.protein, carbs: acc.carbs + e.carbs, fat: acc.fat + e.fat
+  }), { cal: 0, protein: 0, carbs: 0, fat: 0 }), [entries]);
+
+  const remaining = target.cals - consumed.cal;
+  const pct = Math.min(consumed.cal / target.cals, 1);
+  const overTarget = remaining < 0;
+
+  const circumference = 2 * Math.PI * 78;
+  const dashOffset = circumference * (1 - pct);
+  const gaugeColor = overTarget ? "var(--signal)" : target.color;
+
+  if (loading) {
+    return <div className="fl-loading">Loading today's log…</div>;
+  }
+
+  return (
+    <div>
+      <div className="fl-header">
+        <div>
+          <p className="fl-title">Fuel Log</p>
+          <p className="fl-date">{formatDateLabel()}</p>
+        </div>
+        <select className="fl-daytype-select" value={dayType} onChange={handleDayTypeChange}>
+          {Object.entries(DAY_TYPES).map(([key, dt]) => (
+            <option key={key} value={key}>{dt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="fl-gauge-section">
+        <div className="fl-gauge-wrap">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="78" fill="none" stroke="var(--bg-raised)" strokeWidth="12" />
+            <circle
+              cx="90" cy="90" r="78" fill="none"
+              stroke={gaugeColor} strokeWidth="12" strokeLinecap="round"
+              strokeDasharray={circumference} strokeDashoffset={dashOffset}
+              transform="rotate(-90 90 90)"
+              style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
+            />
+          </svg>
+          <div className="fl-gauge-center">
+            <div className="fl-gauge-remaining fl-num" style={{ color: overTarget ? "var(--signal)" : "var(--text)" }}>
+              {overTarget ? `+${Math.abs(remaining)}` : remaining}
+            </div>
+            <div className="fl-gauge-label">{overTarget ? "over target" : "remaining"}</div>
+            <div className="fl-gauge-sub fl-num">{consumed.cal} / {target.cals}</div>
+          </div>
+        </div>
+        <div className="fl-stats">
+          <div className="fl-stat-row">
+            <span className="fl-stat-label">Training day</span>
+            <span className="fl-stat-val" style={{ color: target.color }}>{target.label}</span>
+          </div>
+          <div className="fl-stat-row">
+            <span className="fl-stat-label">Calorie target</span>
+            <span className="fl-stat-val fl-num">{target.cals} kcal</span>
+          </div>
+          <div className="fl-stat-row">
+            <span className="fl-stat-label">Logged</span>
+            <span className="fl-stat-val fl-num">{entries.length} {entries.length === 1 ? "entry" : "entries"}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="fl-macro-section">
+        <p className="fl-macro-title">Macros</p>
+        {[
+          { name: "Protein", val: consumed.protein, goal: target.protein, color: "var(--signal)" },
+          { name: "Carbs", val: consumed.carbs, goal: target.carbs, color: "var(--gold)" },
+          { name: "Fat", val: consumed.fat, goal: target.fat, color: "var(--recovery)" },
+        ].map(m => (
+          <div className="fl-macro-row" key={m.name}>
+            <div className="fl-macro-top">
+              <span className="fl-macro-name">{m.name}</span>
+              <span className="fl-macro-amt fl-num">{m.val}g / {m.goal}g</span>
+            </div>
+            <div className="fl-macro-track">
+              <div className="fl-macro-fill" style={{ width: `${Math.min((m.val/m.goal)*100, 100)}%`, background: m.color }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="fl-entry-section">
+        <div className="fl-entry-form">
+          <input
+            className="fl-entry-input"
+            type="text"
+            placeholder="e.g. grilled chicken breast, cup of rice, side salad with ranch"
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
+          />
+          <button className="fl-entry-btn" onClick={handleAdd} disabled={adding || !inputVal.trim()}>
+            Log it
+          </button>
+        </div>
+
+        <p className="fl-log-title">Today's entries</p>
+        {entries.length === 0 ? (
+          <div className="fl-empty">Nothing logged yet — type a meal above to get started.</div>
+        ) : (
+          <div className="fl-log-list">
+            {entries.slice().reverse().map(e => (
+              <div className="fl-log-item" key={e.id}>
+                <div className="fl-log-left">
+                  <span className="fl-log-desc">
+                    {e.desc}
+                    {e.confidence === "rough" && <span className="fl-tag" style={{ background: "var(--signal-dim)", color: "var(--signal)" }}>rough est.</span>}
+                  </span>
+                  <span className="fl-log-meta">{e.time} · P{e.protein} C{e.carbs} F{e.fat}</span>
+                </div>
+                <div className="fl-log-right">
+                  <span className="fl-log-cal fl-num">{e.cal}</span>
+                  <button className="fl-log-del" onClick={() => handleDelete(e.id)} title="Remove entry">×</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<FuelLog />, document.getElementById("fuel-log-root"));
+</script>
